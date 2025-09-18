@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document Generator</title>
+    <title>Document Generator | MyAdvisor</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
             max-width: 900px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f8f9fa;
+            color: #212529;
         }
         .container {
             background: white;
@@ -21,12 +22,13 @@
         h1 {
             color: #0078d4;
             margin-bottom: 10px;
-            display: flex;
-            align-items: center;
+            font-size: 28px;
+            font-weight: 600;
         }
         .subtitle {
             color: #666;
             margin-bottom: 30px;
+            font-size: 16px;
         }
         textarea {
             width: 100%;
@@ -58,6 +60,7 @@
             cursor: pointer;
             font-size: 16px;
             font-weight: 500;
+            transition: background-color 0.2s;
         }
         button:hover:not(:disabled) {
             background-color: #106ebe;
@@ -110,18 +113,19 @@
 </head>
 <body>
     <div class="container">
-        <h1>📄 Document Generator</h1>
-        <p class="subtitle">Paste your JSON payload below to generate professional documents</p>
+        <h1>Document Generator</h1>
+        <p class="subtitle">Generate professional documents from structured JSON data</p>
 
         <div class="help-text">
-            <strong>How to use:</strong> Get your structured JSON from Claude Projects, paste it below, and click Generate Document.
-            The system supports meeting minutes and assessment reports.
+            <strong>Instructions:</strong> Paste your JSON payload below and click Generate Document.
+            The system will create a Word document and email it to the specified address.
+            Supports meeting minutes and assessment reports.
         </div>
 
         <div class="button-container" style="margin-bottom: 15px;">
-            <button class="sample-btn" onclick="loadSample('meeting')">📝 Load Meeting Sample</button>
-            <button class="sample-btn" onclick="loadSample('assessment')">📊 Load Assessment Sample</button>
-            <button class="sample-btn" onclick="clearText()">🗑️ Clear</button>
+            <button class="sample-btn" onclick="loadSample('meeting')">Load Meeting Sample</button>
+            <button class="sample-btn" onclick="loadSample('assessment')">Load Assessment Sample</button>
+            <button class="sample-btn" onclick="clearText()">Clear</button>
         </div>
 
         <textarea id="jsonInput" placeholder="Paste your JSON payload here...
@@ -139,8 +143,8 @@ Example structure:
 }"></textarea>
 
         <div class="button-container">
-            <button onclick="generateDocument()" id="submitBtn">🚀 Generate Document</button>
-            <button onclick="validateJson()" class="sample-btn">✅ Validate JSON</button>
+            <button onclick="generateDocument()" id="submitBtn">Generate Document</button>
+            <button onclick="validateJson()" class="sample-btn">Validate JSON</button>
         </div>
 
         <div id="status" class="status"></div>
@@ -205,6 +209,7 @@ Example structure:
 
         function loadSample(type) {
             document.getElementById('jsonInput').value = JSON.stringify(samples[type], null, 2);
+            hideStatus();
         }
 
         function clearText() {
@@ -225,13 +230,13 @@ Example structure:
 
                 // Basic validation
                 if (!parsed.templateName || !parsed.userEmail || !parsed.data) {
-                    showStatus('❌ JSON is valid but missing required fields: templateName, userEmail, data', 'error');
+                    showStatus('JSON is valid but missing required fields: templateName, userEmail, data', 'error');
                     return;
                 }
 
-                showStatus('✅ JSON is valid and has required fields!', 'success');
+                showStatus('JSON is valid and has required fields', 'success');
             } catch (e) {
-                showStatus(`❌ Invalid JSON: ${e.message}`, 'error');
+                showStatus(`Invalid JSON: ${e.message}`, 'error');
             }
         }
 
@@ -261,25 +266,22 @@ Example structure:
 
             // Show loading
             submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ Generating...';
-            showStatus('🔄 Generating document... This may take a few moments.', 'loading');
+            submitBtn.textContent = 'Generating...';
+            showStatus('Generating document. This may take a few moments...', 'loading');
 
             try {
-                // Call your API endpoint
-                const response = await fetch('https://docxtemplater-api-nz.azurewebsites.net/v1/generate', {
+                // Call Logic App endpoint
+                const response = await fetch('https://prod-16.newzealandnorth.logic.azure.com:443/workflows/563f12afd4b348e29e1ae222730bcac1/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=gZ8uRe7nSDy9ylzfTP-JtUkA7EdT1pf-XZfrakPvAjk', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'x-api-key': 'c45cde660501bd3dc00548fc51ca9940904941d4587066be4a0db553f4627aa3'
+                        'Content-Type': 'application/json'
                     },
                     body: jsonInput
                 });
 
                 if (response.ok) {
                     const result = await response.json();
-                    showStatus(`✅ Document generated successfully!
-                               File: ${result.document?.filename || 'Document'}
-                               📧 Check your email for delivery.`, 'success');
+                    showStatus(`Document generated successfully!\nFile: ${result.filename || 'Document'}\nCheck your email for delivery.`, 'success');
                 } else {
                     const errorText = await response.text();
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
@@ -287,10 +289,10 @@ Example structure:
 
             } catch (error) {
                 console.error('Error:', error);
-                showStatus(`❌ Error generating document: ${error.message}`, 'error');
+                showStatus(`Error generating document: ${error.message}`, 'error');
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = '🚀 Generate Document';
+                submitBtn.textContent = 'Generate Document';
             }
         }
 
@@ -300,11 +302,11 @@ Example structure:
             status.className = `status ${type}`;
             status.style.display = 'block';
 
-            // Auto-hide success messages after 8 seconds
+            // Auto-hide success messages after 10 seconds
             if (type === 'success') {
                 setTimeout(() => {
                     status.style.display = 'none';
-                }, 8000);
+                }, 10000);
             }
         }
 
@@ -321,12 +323,6 @@ Example structure:
                 e.preventDefault();
                 clearText();
             }
-        });
-
-        // Auto-resize textarea
-        document.getElementById('jsonInput').addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = Math.max(400, this.scrollHeight) + 'px';
         });
     </script>
 </body>
