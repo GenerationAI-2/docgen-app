@@ -151,6 +151,9 @@ Example structure:
     </div>
 
     <script>
+        // Logic App endpoint URL
+        const LOGIC_APP_ENDPOINT = 'https://prod-16.newzealandnorth.logic.azure.com:443/workflows/563f12afd4b348e29e1ae222730bcac1/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=gZ8uRe7nSDy9ylzfTP-JtUkA7EdT1pf-XZfrakPvAjk';
+
         // Sample data
         const samples = {
             meeting: {
@@ -234,9 +237,9 @@ Example structure:
                     return;
                 }
 
-                showStatus('JSON is valid and has required fields', 'success');
+                showStatus('✅ JSON is valid and has required fields', 'success');
             } catch (e) {
-                showStatus(`Invalid JSON: ${e.message}`, 'error');
+                showStatus(`❌ Invalid JSON: ${e.message}`, 'error');
             }
         }
 
@@ -254,24 +257,24 @@ Example structure:
             try {
                 parsedJson = JSON.parse(jsonInput);
             } catch (e) {
-                showStatus('Invalid JSON format. Please check your syntax.', 'error');
+                showStatus('❌ Invalid JSON format. Please check your syntax.', 'error');
                 return;
             }
 
             // Basic validation
             if (!parsedJson.templateName || !parsedJson.userEmail || !parsedJson.data) {
-                showStatus('Missing required fields: templateName, userEmail, data', 'error');
+                showStatus('❌ Missing required fields: templateName, userEmail, data', 'error');
                 return;
             }
 
             // Show loading
             submitBtn.disabled = true;
             submitBtn.textContent = 'Generating...';
-            showStatus('Generating document. This may take a few moments...', 'loading');
+            showStatus('📄 Generating document. This may take a few moments...', 'loading');
 
             try {
                 // Call Logic App endpoint
-                const response = await fetch('https://prod-16.newzealandnorth.logic.azure.com:443/workflows/563f12afd4b348e29e1ae222730bcac1/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=gZ8uRe7nSDy9ylzfTP-JtUkA7EdT1pf-XZfrakPvAjk', {
+                const response = await fetch(LOGIC_APP_ENDPOINT, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -281,7 +284,11 @@ Example structure:
 
                 if (response.ok) {
                     const result = await response.json();
-                    showStatus(`Document generated successfully!\nFile: ${result.filename || 'Document'}\nCheck your email for delivery.`, 'success');
+                    showStatus(`🎉 Document generated successfully!<br>
+                        <strong>File:</strong> ${result.filename || 'Document'}<br>
+                        <strong>Size:</strong> ${result.documentSize ? Math.round(result.documentSize / 1024) + ' KB' : 'Unknown'}<br>
+                        <strong>Processing Time:</strong> ${result.processingTime || 'Unknown'}ms<br><br>
+                        📧 Check your email for delivery.`, 'success');
                 } else {
                     const errorText = await response.text();
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
@@ -289,7 +296,8 @@ Example structure:
 
             } catch (error) {
                 console.error('Error:', error);
-                showStatus(`Error generating document: ${error.message}`, 'error');
+                showStatus(`❌ Error generating document: ${error.message}<br><br>
+                    Please check your JSON format and try again. If the problem persists, contact IT support.`, 'error');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Generate Document';
@@ -298,15 +306,15 @@ Example structure:
 
         function showStatus(message, type) {
             const status = document.getElementById('status');
-            status.innerHTML = message.replace(/\n/g, '<br>');
+            status.innerHTML = message;
             status.className = `status ${type}`;
             status.style.display = 'block';
 
-            // Auto-hide success messages after 10 seconds
+            // Auto-hide success messages after 15 seconds
             if (type === 'success') {
                 setTimeout(() => {
                     status.style.display = 'none';
-                }, 10000);
+                }, 15000);
             }
         }
 
@@ -323,6 +331,21 @@ Example structure:
                 e.preventDefault();
                 clearText();
             }
+        });
+
+        // Auto-format JSON when pasting
+        document.getElementById('jsonInput').addEventListener('paste', function(e) {
+            setTimeout(() => {
+                try {
+                    const text = this.value.trim();
+                    if (text.startsWith('{') || text.startsWith('[')) {
+                        const parsed = JSON.parse(text);
+                        this.value = JSON.stringify(parsed, null, 2);
+                    }
+                } catch (error) {
+                    // Ignore formatting errors - let user see the raw paste
+                }
+            }, 100);
         });
     </script>
 </body>
